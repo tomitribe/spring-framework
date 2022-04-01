@@ -82,6 +82,7 @@ configure(allprojects) { project ->
 
 	apply plugin: "propdeps"
 	apply plugin: "java"
+	apply plugin: 'maven'
 	apply plugin: "test-source-set-dependencies"
 	apply from: "${gradleScriptDir}/ide.gradle"
 
@@ -264,6 +265,16 @@ configure(subprojects - project(":spring-build-src")) { subproject ->
 		archives sourcesJar
 		archives javadocJar
 	}
+
+	uploadArchives {
+		repositories {
+			mavenDeployer {
+				repository(url: "https://repository.tomitribe.com/service/local/staging/deploy/maven2") {
+					authentication(userName: project.repoUser, password: project.repoPassword)
+				}
+			}
+		}
+	}
 }
 
 project("spring-build-src") {
@@ -388,6 +399,8 @@ project("spring-beans-groovy") {
 
 	merge.into = project(":spring-beans")
 	apply plugin: "groovy"
+
+	uploadArchives.enabled = false
 
 	dependencies {
 		compile(project(":spring-core"))
@@ -768,6 +781,7 @@ project("spring-orm") {
 project("spring-orm-hibernate4") {
 	description = "Spring Object/Relational Mapping - Hibernate 4 support"
 	merge.into = project(":spring-orm")
+	uploadArchives.enabled = false
 
 	dependencies {
 		provided(project(":spring-jdbc"))
@@ -786,6 +800,7 @@ project("spring-orm-hibernate4") {
 project("spring-orm-hibernate5") {
 	description = "Spring Object/Relational Mapping - Hibernate 5 support"
 	merge.into = project(":spring-orm")
+	uploadArchives.enabled = false
 
 	dependencies {
 		provided(project(":spring-jdbc"))
@@ -883,6 +898,7 @@ project("spring-webmvc") {
 project("spring-webmvc-tiles2") {
 	description = "Spring Framework Tiles2 Integration"
 	merge.into = project(":spring-webmvc")
+	uploadArchives.enabled = false
 
 	dependencies {
 		provided(project(":spring-context"))
@@ -1381,4 +1397,14 @@ def qualifyVersionIfNecessary(version) {
 		}
 	}
 	return version
+}
+
+uploadArchives {
+	repositories {
+		mavenDeployer {
+			repository(url: "https://repository.tomitribe.com/service/local/staging/deploy/maven2") {
+				authentication(userName: project.repoUser, password: project.repoPassword)
+			}
+		}
+	}
 }
