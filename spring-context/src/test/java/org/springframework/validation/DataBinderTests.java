@@ -738,7 +738,7 @@ public class DataBinderTests {
 		TestBean rod = new TestBean();
 		DataBinder binder = new DataBinder(rod);
 		binder.setAllowedFields("name", "age");
-		binder.setDisallowedFields("age");
+		binder.setDisallowedFields("AGE");
 		MutablePropertyValues pvs = new MutablePropertyValues();
 		pvs.add("name", "Rod");
 		pvs.add("age", "32x");
@@ -784,7 +784,7 @@ public class DataBinderTests {
 		TestBean rod = new TestBean();
 		DataBinder binder = new DataBinder(rod);
 		binder.setAllowedFields("someMap[key1]", "someMap[key2]");
-		binder.setDisallowedFields("someMap['key3']", "someMap[key4]");
+		binder.setDisallowedFields("someMap['KEY3']", "SomeMap[key4]");
 
 		MutablePropertyValues pvs = new MutablePropertyValues();
 		pvs.add("someMap[key1]", "value1");
@@ -1880,11 +1880,12 @@ public class DataBinderTests {
 		binder.setAllowedFields("name", "age");
 
 		String name = "Rob Harrop";
-		String beanName = "foobar";
+		int age = 42;
 
 		MutablePropertyValues mpvs = new MutablePropertyValues();
 		mpvs.add("name", name);
-		mpvs.add("beanName", beanName);
+		mpvs.add("age", age);
+		mpvs.add("beanName", "foobar");
 		binder.bind(mpvs);
 
 		assertEquals(name, testBean.getName());
