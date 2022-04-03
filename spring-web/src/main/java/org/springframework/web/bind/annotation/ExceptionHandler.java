@@ -114,6 +114,7 @@ import java.lang.annotation.Target;
  * @author Arjen Poutsma
  * @author Juergen Hoeller
  * @since 3.0
+ * @see ControllerAdvice
  * @see org.springframework.web.context.request.WebRequest
  * @see org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerExceptionResolver
  * @see org.springframework.web.portlet.mvc.annotation.AnnotationMethodHandlerExceptionResolver
