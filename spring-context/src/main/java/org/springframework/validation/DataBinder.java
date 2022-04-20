@@ -91,9 +91,6 @@ import org.springframework.util.StringUtils;
  * javadoc states details on the default resolution rules.
  *
  * <p>This generic data binder can be used in any kind of environment.
- * It is typically used by Spring web MVC controllers, via the web-specific
- * subclasses {@link org.springframework.web.bind.ServletRequestDataBinder}
- * and {@link org.springframework.web.portlet.bind.PortletRequestDataBinder}.
  *
  * @author Rod Johnson
  * @author Juergen Hoeller
@@ -114,10 +111,10 @@ import org.springframework.util.StringUtils;
  */
 public class DataBinder implements PropertyEditorRegistry, TypeConverter {
 
-	/** Default object name used for binding: "target" */
+	/** Default object name used for binding: "target". */
 	public static final String DEFAULT_OBJECT_NAME = "target";
 
-	/** Default limit for array and collection growing: 256 */
+	/** Default limit for array and collection growing: 256. */
 	public static final int DEFAULT_AUTO_GROW_COLLECTION_LIMIT = 256;
 
 
@@ -453,19 +450,38 @@ public class DataBinder implements PropertyEditorRegistry, TypeConverter {
 	}
 
 	/**
-	 * Register fields that should <i>not</i> be allowed for binding. Default is none.
-	 * Mark fields as disallowed for example to avoid unwanted modifications
-	 * by malicious users when binding HTTP request parameters.
-	 * <p>Supports "xxx*", "*xxx" and "*xxx*" patterns. More sophisticated matching
-	 * can be implemented by overriding the {@code isAllowed} method.
-	 * <p>Alternatively, specify a list of <i>allowed</i> fields.
-	 * @param disallowedFields array of field names
+	 * Register field patterns that should <i>not</i> be allowed for binding.
+	 * <p>Default is none.
+	 * <p>Mark fields as disallowed, for example to avoid unwanted
+	 * modifications by malicious users when binding HTTP request parameters.
+	 * <p>Supports {@code "xxx*"}, {@code "*xxx"}, {@code "*xxx*"}, and
+	 * {@code "xxx*yyy"} matches (with an arbitrary number of pattern parts), as
+	 * well as direct equality.
+	 * <p>The default implementation of this method stores disallowed field patterns
+	 * in {@linkplain PropertyAccessorUtils#canonicalPropertyName(String) canonical}
+	 * form. As of Spring Framework 5.2.21, the default implementation also transforms
+	 * disallowed field patterns to {@linkplain String#toLowerCase() lowercase} to
+	 * support case-insensitive pattern matching in {@link #isAllowed}. Subclasses
+	 * which override this method must therefore take both of these transformations
+	 * into account.
+	 * <p>More sophisticated matching can be implemented by overriding the
+	 * {@link #isAllowed} method.
+	 * <p>Alternatively, specify a list of <i>allowed</i> field patterns.
+	 * @param disallowedFields array of disallowed field patterns
 	 * @see #setAllowedFields
 	 * @see #isAllowed(String)
-	 * @see org.springframework.web.bind.ServletRequestDataBinder
 	 */
 	public void setDisallowedFields(String... disallowedFields) {
-		this.disallowedFields = PropertyAccessorUtils.canonicalPropertyNames(disallowedFields);
+		if (disallowedFields == null) {
+			this.disallowedFields = null;
+		}
+		else {
+			String[] fieldPatterns = new String[disallowedFields.length];
+			for (int i = 0; i < fieldPatterns.length; i++) {
+				fieldPatterns[i] = PropertyAccessorUtils.canonicalPropertyName(disallowedFields[i]).toLowerCase();
+			}
+			this.disallowedFields = fieldPatterns;
+		}
 	}
 
 	/**
@@ -796,7 +812,7 @@ public class DataBinder implements PropertyEditorRegistry, TypeConverter {
 		String[] allowed = getAllowedFields();
 		String[] disallowed = getDisallowedFields();
 		return ((ObjectUtils.isEmpty(allowed) || PatternMatchUtils.simpleMatch(allowed, field)) &&
-				(ObjectUtils.isEmpty(disallowed) || !PatternMatchUtils.simpleMatch(disallowed, field)));
+				(ObjectUtils.isEmpty(disallowed) || !PatternMatchUtils.simpleMatch(disallowed, field.toLowerCase())));
 	}
 
 	/**
