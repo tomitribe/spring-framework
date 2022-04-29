@@ -296,18 +296,29 @@ public class SimpleBrokerMessageHandler extends AbstractBrokerMessageHandler {
 		}
 		else if (SimpMessageType.CONNECT.equals(messageType)) {
 			logMessage(message);
-			long[] clientHeartbeat = SimpMessageHeaderAccessor.getHeartbeat(headers);
-			long[] serverHeartbeat = getHeartbeatValue();
-			Principal user = SimpMessageHeaderAccessor.getUser(headers);
-			this.sessions.put(sessionId, new SessionInfo(sessionId, user, clientHeartbeat, serverHeartbeat));
-			SimpMessageHeaderAccessor connectAck = SimpMessageHeaderAccessor.create(SimpMessageType.CONNECT_ACK);
-			initHeaders(connectAck);
-			connectAck.setSessionId(sessionId);
-			connectAck.setUser(SimpMessageHeaderAccessor.getUser(headers));
-			connectAck.setHeader(SimpMessageHeaderAccessor.CONNECT_MESSAGE_HEADER, message);
-			connectAck.setHeader(SimpMessageHeaderAccessor.HEART_BEAT_HEADER, serverHeartbeat);
-			Message<byte[]> messageOut = MessageBuilder.createMessage(EMPTY_PAYLOAD, connectAck.getMessageHeaders());
-			getClientOutboundChannel().send(messageOut);
+
+			if (sessionId != null) {
+				if (this.sessions.get(sessionId) != null) {
+					if (logger.isWarnEnabled()) {
+						logger.warn("Ignoring CONNECT in session " + sessionId + ". Already connected.");
+					}
+					return;
+				}
+
+				long[] clientHeartbeat = SimpMessageHeaderAccessor.getHeartbeat(headers);
+				long[] serverHeartbeat = getHeartbeatValue();
+				Principal user = SimpMessageHeaderAccessor.getUser(headers);
+				this.sessions.put(sessionId, new SessionInfo(sessionId, user, clientHeartbeat, serverHeartbeat));
+				SimpMessageHeaderAccessor connectAck = SimpMessageHeaderAccessor.create(SimpMessageType.CONNECT_ACK);
+				initHeaders(connectAck);
+				connectAck.setSessionId(sessionId);
+				connectAck.setUser(SimpMessageHeaderAccessor.getUser(headers));
+				connectAck.setHeader(SimpMessageHeaderAccessor.CONNECT_MESSAGE_HEADER, message);
+				connectAck.setHeader(SimpMessageHeaderAccessor.HEART_BEAT_HEADER, serverHeartbeat);
+				Message<byte[]> messageOut =
+						MessageBuilder.createMessage(EMPTY_PAYLOAD, connectAck.getMessageHeaders());
+				getClientOutboundChannel().send(messageOut);
+			}
 		}
 		else if (SimpMessageType.DISCONNECT.equals(messageType)) {
 			logMessage(message);

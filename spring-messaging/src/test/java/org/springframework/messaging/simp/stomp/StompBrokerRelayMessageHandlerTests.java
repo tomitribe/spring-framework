@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2015 the original author or authors.
+ * Copyright 2002-2019 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -219,6 +219,34 @@ public class StompBrokerRelayMessageHandlerTests {
 		verify(handler).handleMessage(captor.capture());
 		assertSame(message, captor.getValue());
 	}
+
+
+
+	@Test
+	public void alreadyConnected() throws Exception{
+
+		this.brokerRelay.start();
+
+		Message<byte[]> connect = connectMessage("sess1", "joe");
+		this.brokerRelay.handleMessage(connect);
+
+		assertEquals(2, this.tcpClient.getSentMessages().size());
+
+		StompHeaderAccessor headers1 = this.tcpClient.getSentHeaders(0);
+		assertEquals(StompCommand.CONNECT, headers1.getCommand());
+		assertEquals(StompBrokerRelayMessageHandler.SYSTEM_SESSION_ID, headers1.getSessionId());
+
+
+		StompHeaderAccessor headers2 = this.tcpClient.getSentHeaders(1);
+		assertEquals(StompCommand.CONNECT, headers2.getCommand());
+		assertEquals("sess1", headers2.getSessionId());
+
+		this.brokerRelay.handleMessage(connect);
+
+		assertEquals(2, this.tcpClient.getSentMessages().size());
+		assertTrue(this.outboundChannel.getMessages().isEmpty());
+	}
+
 
 	private Message<byte[]> connectMessage(String sessionId, String user) {
 		StompHeaderAccessor headers = StompHeaderAccessor.create(StompCommand.CONNECT);
