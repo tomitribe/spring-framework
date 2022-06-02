@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2020 the original author or authors.
+ * Copyright 2002-2022 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
+import java.net.URL;
 import java.security.ProtectionDomain;
 import java.util.Collections;
 import java.util.Iterator;
@@ -29,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -93,11 +95,13 @@ public class CachedIntrospectionResults {
 	 */
 	public static final String IGNORE_BEANINFO_PROPERTY_NAME = "spring.beaninfo.ignore";
 
+	private static final PropertyDescriptor[] EMPTY_PROPERTY_DESCRIPTOR_ARRAY = {};
+
 
 	private static final boolean shouldIntrospectorIgnoreBeaninfoClasses =
 			SpringProperties.getFlag(IGNORE_BEANINFO_PROPERTY_NAME);
 
-	/** Stores the BeanInfoFactory instances */
+	/** Stores the BeanInfoFactory instances. */
 	private static final List<BeanInfoFactory> beanInfoFactories = SpringFactoriesLoader.loadFactories(
 			BeanInfoFactory.class, CachedIntrospectionResults.class.getClassLoader());
 
@@ -176,7 +180,6 @@ public class CachedIntrospectionResults {
 	 * @return the corresponding CachedIntrospectionResults
 	 * @throws BeansException in case of introspection failure
 	 */
-	@SuppressWarnings("unchecked")
 	static CachedIntrospectionResults forClass(Class<?> beanClass) throws BeansException {
 		CachedIntrospectionResults results = strongClassCache.get(beanClass);
 		if (results != null) {
@@ -244,14 +247,32 @@ public class CachedIntrospectionResults {
 		return false;
 	}
 
+	/**
+	 * Retrieve a {@link BeanInfo} descriptor for the given target class.
+	 * @param beanClass the target class to introspect
+	 * @return the resulting {@code BeanInfo} descriptor (never {@code null})
+	 * @throws IntrospectionException from the underlying {@link Introspector}
+	 */
+	private static BeanInfo getBeanInfo(Class<?> beanClass) throws IntrospectionException {
+		for (BeanInfoFactory beanInfoFactory : beanInfoFactories) {
+			BeanInfo beanInfo = beanInfoFactory.getBeanInfo(beanClass);
+			if (beanInfo != null) {
+				return beanInfo;
+			}
+		}
+		return (shouldIntrospectorIgnoreBeaninfoClasses ?
+				Introspector.getBeanInfo(beanClass, Introspector.IGNORE_ALL_BEANINFO) :
+				Introspector.getBeanInfo(beanClass));
+	}
 
-	/** The BeanInfo object for the introspected bean class */
+
+	/** The BeanInfo object for the introspected bean class. */
 	private final BeanInfo beanInfo;
 
-	/** PropertyDescriptor objects keyed by property name String */
-	private final Map<String, PropertyDescriptor> propertyDescriptorCache;
+	/** PropertyDescriptor objects keyed by property name String. */
+	private final Map<String, PropertyDescriptor> propertyDescriptors;
 
-	/** TypeDescriptor objects keyed by PropertyDescriptor */
+	/** TypeDescriptor objects keyed by PropertyDescriptor. */
 	private final ConcurrentMap<PropertyDescriptor, TypeDescriptor> typeDescriptorCache;
 
 
@@ -265,37 +286,27 @@ public class CachedIntrospectionResults {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Getting BeanInfo for class [" + beanClass.getName() + "]");
 			}
-
-			BeanInfo beanInfo = null;
-			for (BeanInfoFactory beanInfoFactory : beanInfoFactories) {
-				beanInfo = beanInfoFactory.getBeanInfo(beanClass);
-				if (beanInfo != null) {
-					break;
-				}
-			}
-			if (beanInfo == null) {
-				// If none of the factories supported the class, fall back to the default
-				beanInfo = (shouldIntrospectorIgnoreBeaninfoClasses ?
-						Introspector.getBeanInfo(beanClass, Introspector.IGNORE_ALL_BEANINFO) :
-						Introspector.getBeanInfo(beanClass));
-			}
-			this.beanInfo = beanInfo;
+			this.beanInfo = getBeanInfo(beanClass);
 
 			if (logger.isTraceEnabled()) {
 				logger.trace("Caching PropertyDescriptors for class [" + beanClass.getName() + "]");
 			}
-			this.propertyDescriptorCache = new LinkedHashMap<String, PropertyDescriptor>();
+			this.propertyDescriptors = new LinkedHashMap<String, PropertyDescriptor>();
 
 			// This call is slow so we do it once.
 			PropertyDescriptor[] pds = this.beanInfo.getPropertyDescriptors();
 			for (PropertyDescriptor pd : pds) {
-				if (Class.class == beanClass && (!"name".equals(pd.getName()) && !pd.getName().endsWith("Name"))) {
+				if (Class.class == beanClass && !("name".equals(pd.getName()) ||
+						(pd.getName().endsWith("Name") && String.class == pd.getPropertyType()))) {
 					// Only allow all name variants of Class properties
 					continue;
 				}
-				if (pd.getPropertyType() != null && (ClassLoader.class.isAssignableFrom(pd.getPropertyType())
-						|| ProtectionDomain.class.isAssignableFrom(pd.getPropertyType()))) {
-					// Ignore ClassLoader and ProtectionDomain types - nobody needs to bind to those
+				if (URL.class == beanClass && "content".equals(pd.getName())) {
+					// Only allow URL attribute introspection, not content resolution
+					continue;
+				}
+				if (pd.getWriteMethod() == null && isInvalidReadOnlyPropertyType(pd.getPropertyType())) {
+					// Ignore read-only properties such as ClassLoader - no need to bind to those
 					continue;
 				}
 				if (logger.isTraceEnabled()) {
@@ -305,30 +316,15 @@ public class CachedIntrospectionResults {
 									"; editor [" + pd.getPropertyEditorClass().getName() + "]" : ""));
 				}
 				pd = buildGenericTypeAwarePropertyDescriptor(beanClass, pd);
-				this.propertyDescriptorCache.put(pd.getName(), pd);
+				this.propertyDescriptors.put(pd.getName(), pd);
 			}
 
 			// Explicitly check implemented interfaces for setter/getter methods as well,
 			// in particular for Java 8 default methods...
-			Class<?> clazz = beanClass;
-			while (clazz != null) {
-				Class<?>[] ifcs = clazz.getInterfaces();
-				for (Class<?> ifc : ifcs) {
-					BeanInfo ifcInfo = Introspector.getBeanInfo(ifc, Introspector.IGNORE_ALL_BEANINFO);
-					PropertyDescriptor[] ifcPds = ifcInfo.getPropertyDescriptors();
-					for (PropertyDescriptor pd : ifcPds) {
-						if (!this.propertyDescriptorCache.containsKey(pd.getName())) {
-							pd = buildGenericTypeAwarePropertyDescriptor(beanClass, pd);
-						    if (pd.getPropertyType() != null && (ClassLoader.class.isAssignableFrom(pd.getPropertyType())
-								    || ProtectionDomain.class.isAssignableFrom(pd.getPropertyType()))) {
-							    // Ignore ClassLoader and ProtectionDomain types - nobody needs to bind to those
-							    continue;
-						    }
-							this.propertyDescriptorCache.put(pd.getName(), pd);
-						}
-					}
-				}
-				clazz = clazz.getSuperclass();
+			Class<?> currClass = beanClass;
+			while (currClass != null && currClass != Object.class) {
+				introspectInterfaces(beanClass, currClass);
+				currClass = currClass.getSuperclass();
 			}
 
 			this.typeDescriptorCache = new ConcurrentReferenceHashMap<PropertyDescriptor, TypeDescriptor>();
@@ -338,6 +334,35 @@ public class CachedIntrospectionResults {
 		}
 	}
 
+	private void introspectInterfaces(Class<?> beanClass, Class<?> currClass) throws IntrospectionException {
+		for (Class<?> ifc : currClass.getInterfaces()) {
+			if (!ClassUtils.isJavaLanguageInterface(ifc)) {
+				for (PropertyDescriptor pd : getBeanInfo(ifc).getPropertyDescriptors()) {
+					PropertyDescriptor existingPd = this.propertyDescriptors.get(pd.getName());
+					if (existingPd == null ||
+							(existingPd.getReadMethod() == null && pd.getReadMethod() != null)) {
+						// GenericTypeAwarePropertyDescriptor leniently resolves a set* write method
+						// against a declared read method, so we prefer read method descriptors here.
+						pd = buildGenericTypeAwarePropertyDescriptor(beanClass, pd);
+						if (pd.getWriteMethod() == null && isInvalidReadOnlyPropertyType(pd.getPropertyType())) {
+							// Ignore read-only properties such as ClassLoader - no need to bind to those
+							continue;
+						}
+						this.propertyDescriptors.put(pd.getName(), pd);
+					}
+				}
+				introspectInterfaces(ifc, ifc);
+			}
+		}
+	}
+
+	private boolean isInvalidReadOnlyPropertyType(Class<?> returnType) {
+		return (returnType != null && (AutoCloseable.class.isAssignableFrom(returnType) ||
+				ClassLoader.class.isAssignableFrom(returnType) ||
+				ProtectionDomain.class.isAssignableFrom(returnType)));
+	}
+
+
 	BeanInfo getBeanInfo() {
 		return this.beanInfo;
 	}
@@ -346,13 +371,14 @@ public class CachedIntrospectionResults {
 		return this.beanInfo.getBeanDescriptor().getBeanClass();
 	}
 
+
 	PropertyDescriptor getPropertyDescriptor(String name) {
-		PropertyDescriptor pd = this.propertyDescriptorCache.get(name);
+		PropertyDescriptor pd = this.propertyDescriptors.get(name);
 		if (pd == null && StringUtils.hasLength(name)) {
 			// Same lenient fallback checking as in Property...
-			pd = this.propertyDescriptorCache.get(StringUtils.uncapitalize(name));
+			pd = this.propertyDescriptors.get(StringUtils.uncapitalize(name));
 			if (pd == null) {
-				pd = this.propertyDescriptorCache.get(StringUtils.capitalize(name));
+				pd = this.propertyDescriptors.get(StringUtils.capitalize(name));
 			}
 		}
 		return (pd == null || pd instanceof GenericTypeAwarePropertyDescriptor ? pd :
@@ -360,14 +386,7 @@ public class CachedIntrospectionResults {
 	}
 
 	PropertyDescriptor[] getPropertyDescriptors() {
-		PropertyDescriptor[] pds = new PropertyDescriptor[this.propertyDescriptorCache.size()];
-		int i = 0;
-		for (PropertyDescriptor pd : this.propertyDescriptorCache.values()) {
-			pds[i] = (pd instanceof GenericTypeAwarePropertyDescriptor ? pd :
-					buildGenericTypeAwarePropertyDescriptor(getBeanClass(), pd));
-			i++;
-		}
-		return pds;
+		return this.propertyDescriptors.values().toArray(EMPTY_PROPERTY_DESCRIPTOR_ARRAY);
 	}
 
 	private PropertyDescriptor buildGenericTypeAwarePropertyDescriptor(Class<?> beanClass, PropertyDescriptor pd) {
@@ -384,6 +403,7 @@ public class CachedIntrospectionResults {
 		TypeDescriptor existing = this.typeDescriptorCache.putIfAbsent(pd, td);
 		return (existing != null ? existing : td);
 	}
+
 
 	TypeDescriptor getTypeDescriptor(PropertyDescriptor pd) {
 		return this.typeDescriptorCache.get(pd);

@@ -493,7 +493,13 @@ public class StompBrokerRelayMessageHandler extends AbstractBrokerMessageHandler
 			return;
 		}
 
-		if (StompCommand.CONNECT.equals(command)) {
+		if (StompCommand.CONNECT.equals(command) || StompCommand.STOMP.equals(command)) {
+			if (this.connectionHandlers.get(sessionId) != null) {
+				if (logger.isWarnEnabled()) {
+					logger.warn("Ignoring CONNECT in session " + sessionId + ". Already connected.");
+				}
+				return;
+			}
 			if (logger.isDebugEnabled()) {
 				logger.debug(stompAccessor.getShortLogMessage(EMPTY_PAYLOAD));
 			}
