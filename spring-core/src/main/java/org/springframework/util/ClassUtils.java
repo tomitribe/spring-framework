@@ -17,6 +17,9 @@
 package org.springframework.util;
 
 import java.beans.Introspector;
+import java.io.Closeable;
+import java.io.Externalizable;
+import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -96,6 +99,11 @@ public abstract class ClassUtils {
 	 */
 	private static final Map<String, Class<?>> commonClassCache = new HashMap<String, Class<?>>(32);
 
+	/**
+	 * Common Java language interfaces which are supposed to be ignored
+	 * when searching for 'primary' user-level interfaces.
+	 */
+	private static final Set<Class<?>> javaLanguageInterfaces;
 
 	static {
 		primitiveWrapperTypeMap.put(Boolean.class, boolean.class);
@@ -129,6 +137,10 @@ public abstract class ClassUtils {
 		registerCommonClasses(Throwable.class, Exception.class, RuntimeException.class,
 				Error.class, StackTraceElement.class, StackTraceElement[].class);
 		registerCommonClasses(Enum.class, Iterable.class, Cloneable.class, Comparable.class);
+		Class<?>[] javaLanguageInterfaceArray = {Serializable.class, Externalizable.class,
+				Closeable.class, AutoCloseable.class, Cloneable.class, Comparable.class};
+		registerCommonClasses(javaLanguageInterfaceArray);
+		javaLanguageInterfaces = new HashSet<Class<?>>(Arrays.asList(javaLanguageInterfaceArray));
 	}
 
 
@@ -744,6 +756,19 @@ public abstract class ClassUtils {
 		}
 		while (!ancestor.isAssignableFrom(clazz2));
 		return ancestor;
+	}
+
+	/**
+	 * Determine whether the given interface is a common Java language interface:
+	 * {@link Serializable}, {@link Externalizable}, {@link Closeable}, {@link AutoCloseable},
+	 * {@link Cloneable}, {@link Comparable} - all of which can be ignored when looking
+	 * for 'primary' user-level interfaces. Common characteristics: no service-level
+	 * operations, no bean property methods, no default methods.
+	 * @param ifc the interface to check
+	 * @since 5.0.3
+	 */
+	public static boolean isJavaLanguageInterface(Class<?> ifc) {
+		return javaLanguageInterfaces.contains(ifc);
 	}
 
 	/**
