@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2018 the original author or authors.
+ * Copyright 2002-2021 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,13 +42,28 @@ public class OperatorMatches extends Operator {
 
 	private static final int PATTERN_ACCESS_THRESHOLD = 1000000;
 
-	private final ConcurrentMap<String, Pattern> patternCache = new ConcurrentHashMap<String, Pattern>();
+	private final ConcurrentMap<String, Pattern> patternCache;
 
 
-	public OperatorMatches(int pos, SpelNodeImpl... operands) {
-		super("matches", pos, operands);
+	/**
+	 * Create a new {@link OperatorMatches} instance.
+	 * @deprecated as of Spring Framework 5.3.26 in favor of invoking
+	 * {@link #OperatorMatches(ConcurrentMap, int, int, SpelNodeImpl...)}
+	 * with a shared pattern cache instead
+	 */
+	@Deprecated(since = "5.3.26")
+	public OperatorMatches(int startPos, int endPos, SpelNodeImpl... operands) {
+		this(new ConcurrentHashMap<>(), startPos, endPos, operands);
 	}
 
+	/**
+	 * Create a new {@link OperatorMatches} instance with a shared pattern cache.
+	 * @since 5.3.26
+	 */
+	public OperatorMatches(ConcurrentMap<String, Pattern> patternCache, int startPos, int endPos, SpelNodeImpl... operands) {
+		super("matches", startPos, endPos, operands);
+		this.patternCache = patternCache;
+	}
 
 	/**
 	 * Check the first operand matches the regex specified as the second operand.
@@ -67,15 +82,14 @@ public class OperatorMatches extends Operator {
 
 		if (left == null) {
 			throw new SpelEvaluationException(leftOp.getStartPosition(),
-					SpelMessage.INVALID_FIRST_OPERAND_FOR_MATCHES_OPERATOR, left);
+					SpelMessage.INVALID_FIRST_OPERAND_FOR_MATCHES_OPERATOR, (Object) null);
 		}
-		if (!(right instanceof String)) {
+		if (!(right instanceof String rightString)) {
 			throw new SpelEvaluationException(rightOp.getStartPosition(),
 					SpelMessage.INVALID_SECOND_OPERAND_FOR_MATCHES_OPERATOR, right);
 		}
 
 		try {
-			String rightString = (String) right;
 			Pattern pattern = this.patternCache.get(rightString);
 			if (pattern == null) {
 				pattern = Pattern.compile(rightString);
@@ -111,22 +125,25 @@ public class OperatorMatches extends Operator {
 
 		private final CharSequence value;
 
-		private AccessCount access;
+		private final AccessCount access;
 
 		public MatcherInput(CharSequence value, AccessCount access) {
 			this.value = value;
 			this.access = access;
 		}
 
+		@Override
 		public char charAt(int index) {
 			this.access.check();
 			return this.value.charAt(index);
 		}
 
+		@Override
 		public CharSequence subSequence(int start, int end) {
 			return new MatcherInput(this.value.subSequence(start, end), this.access);
 		}
 
+		@Override
 		public int length() {
 			return this.value.length();
 		}
