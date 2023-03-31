@@ -19,6 +19,7 @@ package org.springframework.expression.spel.standard;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
@@ -246,7 +247,7 @@ class InternalSpelExpressionParser extends TemplateAwareExpressionParser {
 			}
 
 			if (tk == TokenKind.MATCHES) {
-				return new OperatorMatches(this.patternCache, t.startPos, t.endPos, expr, rhExpr);
+				return new OperatorMatches(this.patternCache, toPos(t), expr, rhExpr);
 			}
 
 			Assert.isTrue(tk == TokenKind.BETWEEN, "Between token expected");

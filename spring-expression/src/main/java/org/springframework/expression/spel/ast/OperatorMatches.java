@@ -45,22 +45,12 @@ public class OperatorMatches extends Operator {
 	private final ConcurrentMap<String, Pattern> patternCache;
 
 
-	/**
-	 * Create a new {@link OperatorMatches} instance.
-	 * @deprecated as of Spring Framework 5.3.26 in favor of invoking
-	 * {@link #OperatorMatches(ConcurrentMap, int, int, SpelNodeImpl...)}
-	 * with a shared pattern cache instead
-	 */
-	public OperatorMatches(int startPos, int endPos, SpelNodeImpl... operands) {
-		this(new ConcurrentHashMap<String, Pattern>(), startPos, endPos, operands);
+	public OperatorMatches(int pos, SpelNodeImpl... operands) {
+		this(new ConcurrentHashMap<String, Pattern>(), pos, operands);
 	}
 
-	/**
-	 * Create a new {@link OperatorMatches} instance with a shared pattern cache.
-	 * @since 5.3.26
-	 */
-	public OperatorMatches(ConcurrentMap<String, Pattern> patternCache, int startPos, int endPos, SpelNodeImpl... operands) {
-		super("matches", startPos, endPos, operands);
+	public OperatorMatches(ConcurrentMap<String, Pattern> patternCache, int pos, SpelNodeImpl... operands) {
+		super("matches", pos, operands);
 		this.patternCache = patternCache;
 	}
 
