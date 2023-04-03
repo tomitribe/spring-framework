@@ -215,12 +215,12 @@ public class EvaluationTests extends AbstractExpressionTests {
 		String pattern = "(0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" +
 				"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" +
 				"01234567890123456789012345678901234567890123456789|abc)";
-		assertThat(pattern).hasSize(256);
+		assertEquals(256, pattern.length());
 		Expression expr = parser.parseExpression("'abc' matches '" + pattern + "'");
-		assertThat(expr.getValue(context, Boolean.class)).isTrue();
+		assertTrue(expr.getValue(context, Boolean.class));
 
 		pattern += "?";
-		assertThat(pattern).hasSize(257);
+		assertEquals(257, pattern.length());
 		evaluateAndCheckError("'abc' matches '" + pattern + "'", Boolean.class, SpelMessage.MAX_REGEX_LENGTH_EXCEEDED);
 	}
 
