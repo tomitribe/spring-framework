@@ -118,9 +118,15 @@ public class OpMultiply extends Operator {
 
 		if (leftOperand instanceof String && rightOperand instanceof Integer) {
 		    String text = (String) leftOperand;
-			int count = (Integer) rightOperand;
-			checkRepeatedTextSize(text, count);
-			return new TypedValue(text.repeat(count));
+			int repeats = (Integer) rightOperand;
+			checkRepeatedTextSize(text, repeats);
+
+			StringBuilder result = new StringBuilder();
+			for (int i = 0; i < repeats; i++) {
+				result.append(leftOperand);
+			}
+
+			return new TypedValue(result.toString());
 		}
 
 		return state.operate(Operation.MULTIPLY, leftOperand, rightOperand);
