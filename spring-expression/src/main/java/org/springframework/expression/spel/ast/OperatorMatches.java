@@ -76,7 +76,7 @@ public class OperatorMatches extends Operator {
 		String input = leftOp.getValue(state, String.class);
 		if (input == null) {
 			throw new SpelEvaluationException(leftOp.getStartPosition(),
-					SpelMessage.INVALID_FIRST_OPERAND_FOR_MATCHES_OPERATOR, left);
+					SpelMessage.INVALID_FIRST_OPERAND_FOR_MATCHES_OPERATOR, input);
 		}
 
 		Object right = rightOp.getValue(state);

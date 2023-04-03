@@ -573,13 +573,13 @@ public class OperatorTests extends AbstractExpressionTests {
 	}
 
 	@Test
-	void stringRepeat() {
+	public void stringRepeat() {
 		evaluate("'abc' * 0", "", String.class);
 		evaluate("'abc' * 1", "abc", String.class);
 		evaluate("'abc' * 2", "abcabc", String.class);
 
 		Expression expr = parser.parseExpression("'a' * 256");
-		assertThat(expr.getValue(context, String.class)).hasSize(256);
+		assertEquals(256, expr.getValue(context, String.class).length());
 
 		// 4 is the position of the '*' (repeat operator)
 		evaluateAndCheckError("'a' * 257", String.class, MAX_REPEATED_TEXT_SIZE_EXCEEDED, 4);
