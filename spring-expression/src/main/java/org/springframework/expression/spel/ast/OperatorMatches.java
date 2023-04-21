@@ -46,7 +46,7 @@ public class OperatorMatches extends Operator {
 	 * Maximum number of characters permitted in a regular expression.
 	 * @since 5.3.26
 	 */
-	private static final int MAX_REGEX_LENGTH = 256;
+	private static final int MAX_REGEX_LENGTH = 1000;
 
 	private final ConcurrentMap<String, Pattern> patternCache;
 

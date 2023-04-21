@@ -27,6 +27,9 @@ import org.springframework.expression.TypeConverter;
 import org.springframework.expression.TypedValue;
 import org.springframework.expression.spel.CodeFlow;
 import org.springframework.expression.spel.ExpressionState;
+import org.springframework.expression.spel.SpelEvaluationException;
+import org.springframework.expression.spel.SpelMessage;
+//import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.NumberUtils;
 
@@ -48,6 +51,12 @@ import org.springframework.util.NumberUtils;
  * @since 3.0
  */
 public class OpPlus extends Operator {
+
+	/**
+	 * Maximum number of characters permitted in a concatenated string.
+	 * @since 5.2.24
+	 */
+	private static final int MAX_CONCATENATED_STRING_LENGTH = 100000;
 
 	public OpPlus(int pos, SpelNodeImpl... operands) {
 		super("+", pos, operands);
@@ -123,20 +132,43 @@ public class OpPlus extends Operator {
 
 		if (leftOperand instanceof String && rightOperand instanceof String) {
 			this.exitTypeDescriptor = "Ljava/lang/String";
-			return new TypedValue((String) leftOperand + rightOperand);
+			String leftString = (String) leftOperand;
+			String rightString = (String) rightOperand;
+			checkStringLength(leftString);
+			checkStringLength(rightString);
+			return concatenate(leftString, rightString);
 		}
 
 		if (leftOperand instanceof String) {
-			return new TypedValue(
-					leftOperand + (rightOperand == null ? "null" : convertTypedValueToString(operandTwoValue, state)));
+			String leftString = (String) leftOperand;
+			checkStringLength(leftString);
+			String rightString = (rightOperand == null ? "null" : convertTypedValueToString(operandTwoValue, state));
+			checkStringLength(rightString);
+			return concatenate(leftString, rightString);
 		}
 
 		if (rightOperand instanceof String) {
-			return new TypedValue(
-					(leftOperand == null ? "null" : convertTypedValueToString(operandOneValue, state)) + rightOperand);
+			String rightString = (String) rightOperand;
+			checkStringLength(rightString);
+			String leftString = (leftOperand == null ? "null" : convertTypedValueToString(operandOneValue, state));
+			checkStringLength(leftString);
+			return concatenate(leftString, rightString);
 		}
 
 		return state.operate(Operation.ADD, leftOperand, rightOperand);
+	}
+
+	private void checkStringLength(String string) {
+		if (string.length() > MAX_CONCATENATED_STRING_LENGTH) {
+			throw new SpelEvaluationException(getStartPosition(),
+					SpelMessage.MAX_CONCATENATED_STRING_LENGTH_EXCEEDED, MAX_CONCATENATED_STRING_LENGTH);
+		}
+	}
+
+	private TypedValue concatenate(String leftString, String rightString) {
+		String result = leftString + rightString;
+		checkStringLength(result);
+		return new TypedValue(result);
 	}
 
 	@Override
