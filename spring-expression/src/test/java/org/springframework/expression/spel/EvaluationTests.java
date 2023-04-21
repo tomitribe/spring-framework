@@ -58,6 +58,20 @@ import static org.junit.Assert.*;
 public class EvaluationTests extends AbstractExpressionTests {
 
 	@Test
+	public void expressionLength() {
+		String expression = String.format("'X' + '%s'", repeat(" ", 9992));
+		assertEquals(10000, expression.length());
+		Expression expr = parser.parseExpression(expression);
+		String result = expr.getValue(context, String.class);
+		assertEquals(9993, result.length());
+		assertEquals("X", result.trim());
+
+		expression = String.format("'X' + '%s'", repeat(" ", 9993));
+		assertEquals(10001, expression.length());
+		evaluateAndCheckError(expression, String.class, SpelMessage.MAX_EXPRESSION_LENGTH_EXCEEDED);
+	}
+
+	@Test
 	public void testCreateListsOnAttemptToIndexNull01() throws EvaluationException, ParseException {
 		ExpressionParser parser = new SpelExpressionParser(new SpelParserConfiguration(true, true));
 		Expression e = parser.parseExpression("list[0]");
@@ -212,15 +226,13 @@ public class EvaluationTests extends AbstractExpressionTests {
 	
 	@Test
 	public void matchesWithPatternLengthThreshold() {
-		String pattern = "(0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" +
-				"0123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789" +
-				"01234567890123456789012345678901234567890123456789|abc)";
-		assertEquals(256, pattern.length());
-		Expression expr = parser.parseExpression("'abc' matches '" + pattern + "'");
+		String pattern = String.format("^(%s|X)", repeat("12345", 199));
+		assertEquals(1000, pattern.length());
+		Expression expr = parser.parseExpression("'X' matches '" + pattern + "'");
 		assertTrue(expr.getValue(context, Boolean.class));
 
 		pattern += "?";
-		assertEquals(257, pattern.length());
+		assertEquals(1001, pattern.length());
 		evaluateAndCheckError("'abc' matches '" + pattern + "'", Boolean.class, SpelMessage.MAX_REGEX_LENGTH_EXCEEDED);
 	}
 
@@ -1435,6 +1447,15 @@ public class EvaluationTests extends AbstractExpressionTests {
 			return null;
 		}
 
+	}
+
+
+	private static String repeat(String str, int count) {
+		String result = "";
+		for (int i = 0; i < count; i++) {
+			result += str;
+		}
+		return result;
 	}
 
 
