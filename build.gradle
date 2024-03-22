@@ -2,14 +2,18 @@ buildscript {
 	repositories {
 		gradlePluginPortal()
 		maven { url "http://dist.wso2.org/maven2" }
-		maven { url "https://repo1.maven.org/maven2" }
-		maven { url "https://repo.spring.io/plugins-release"}
-		maven { url "https://repo.spring.io/plugins-snapshot" }
-		maven { url "https://repo1.maven.org/maven2/" }
+
+
+		maven { url "https://repository.tomitribe.com/content/groups/tomitribe/"
+			credentials {
+				username project.repoUser
+				password project.repoPassword
+			}
+		}
 	}
 	dependencies {
-		classpath("io.spring.gradle:propdeps-plugin:0.0.8-SNAPSHOT")
-		classpath("io.spring.gradle:docbook-reference-plugin:0.3.2-SNAPSHOT")
+		classpath("io.spring.gradle:propdeps-plugin:0.0.10-TT.1")
+		classpath("io.spring.gradle:docbook-reference-plugin:0.3.2")
 		classpath("org.asciidoctor:asciidoctor-gradle-plugin:1.5.2")
 		classpath("ws.antonov.gradle.plugins:gradle-plugin-protobuf:0.9.1")
 	}
