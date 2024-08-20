@@ -292,6 +292,9 @@ public class ServletWebRequest extends ServletRequestAttributes implements Nativ
 
 		// We will perform this validation...
 		etag = padEtagIfNecessary(etag);
+		if (etag.startsWith("W/")) {
+			etag = etag.substring(2);
+		}
 		while (ifNoneMatch.hasMoreElements()) {
 			// Compare weak/strong ETags as per https://tools.ietf.org/html/rfc7232#section-2.3
 			for (ETag requestedETag : ETag.parse(ifNoneMatch.nextElement())) {
