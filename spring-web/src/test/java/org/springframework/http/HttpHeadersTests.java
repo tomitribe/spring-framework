@@ -157,6 +157,12 @@ public class HttpHeadersTests {
 		assertEquals("Invalid ETag header", "\"v2.6\"", headers.getFirst("ETag"));
 	}
 
+    @Test(expected = IllegalArgumentException.class)
+    public void illegalWeakETagWithoutLeadingQuote() {
+        String etag = "W/v2.6\"";
+        headers.setETag(etag);
+    }
+
 	@Test
 	public void ifMatch() {
 		String ifMatch = "\"v2.6\"";
