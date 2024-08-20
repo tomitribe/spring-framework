@@ -242,6 +242,13 @@ public class ConstructorReference extends SpelNodeImpl {
 					FormatHelper.formatClassNameForMessage(intendedArrayType.getClass()));
 		}
 		String type = (String) intendedArrayType;
+
+		if (state.getEvaluationContext().getConstructorResolvers().isEmpty()) {
+			// No constructor resolver -> no array construction either (as of 5.3.38)
+			throw new SpelEvaluationException(getStartPosition(), SpelMessage.CONSTRUCTOR_NOT_FOUND,
+					type + "[]", "[]");
+		}
+
 		Class<?> componentType;
 		TypeCode arrayTypeCode = TypeCode.forName(type);
 		if (arrayTypeCode == TypeCode.OBJECT) {
