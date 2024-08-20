@@ -18,8 +18,10 @@ package org.springframework.expression.spel;
 
 import org.junit.Test;
 
+import org.springframework.expression.EvaluationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.SimpleEvaluationContext;
 
 import static org.junit.Assert.*;
 
@@ -104,6 +106,18 @@ public class ArrayConstructorTests extends AbstractExpressionTests {
 		evaluate("new String[3][2][1]",
 			"[[Ljava.lang.String;[3]{[2]{[1]{null},[1]{null}},[2]{[1]{null},[1]{null}},[2]{[1]{null},[1]{null}}}",
 			String[][][].class);
+	}
+
+	@Test
+	public void noArrayConstruction() {
+		EvaluationContext context = SimpleEvaluationContext.forReadWriteDataBinding().build();
+
+		try{
+			parser.parseExpression("new int[2]").getValue(context);
+		}
+		catch(Exception e){
+			assertTrue(e instanceof SpelEvaluationException);
+		}
 	}
 
 	@Test

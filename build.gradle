@@ -12,6 +12,8 @@ buildscript {
 		}
 	}
 	dependencies {
+		classpath("org.asciidoctor:asciidoctorj-groovy-dsl:1.0.0.preview2")
+		classpath("org.asciidoctor:asciidoctorj:1.5.2")
 		classpath("io.spring.gradle:propdeps-plugin:0.0.10-TT.1")
 		classpath("io.spring.gradle:docbook-reference-plugin:0.3.2")
 		classpath("org.asciidoctor:asciidoctor-gradle-plugin:1.5.2")
@@ -141,6 +143,13 @@ configure(allprojects) { project ->
 	repositories {
 		mavenCentral()
 		maven { url "https://repo.spring.io/libs-spring-framework-build" }
+		maven { url "https://repository.tomitribe.com/content/groups/tomitribe/"
+			credentials {
+				username project.repoUser
+				password project.repoPassword
+			}
+		}
+
 	}
 
 	dependencies {
