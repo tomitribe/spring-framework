@@ -302,8 +302,27 @@ configure(allprojects) { project ->
 	}
 }
 
+
+// Configuration for the subprojects to ensure all are published
+configure(subprojects) { subproject ->
+	apply plugin: 'maven-publish'
+
+	publishing {
+		repositories {
+			maven {
+				url = uri("https://repository.tomitribe.com/service/local/staging/deploy/maven2")
+				credentials {
+					username = project.repoUser
+					password = project.repoPassword
+				}
+			}
+		}
+	}
+}
+
+
 configure([rootProject] + javaProjects) { project ->
-	group = "org.springframework"
+	group = "org.tomitribe.springframework"
 
 	apply plugin: "java"
 	apply plugin: "java-test-fixtures"
@@ -405,24 +424,8 @@ configure(moduleProjects) { project ->
 }
 
 
-// Changes for publishing to Maven repository
-publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			from components.java // Adjust if necessary for your project
-		}
-	}
 
-	repositories {
-		maven {
-			url = uri("https://repository.tomitribe.com/service/local/staging/deploy/maven2")
-			credentials {
-				username = project.repoUser
-				password = project.repoPassword
-			}
-		}
-	}
-}
+
 
 configure(rootProject) {
 	description = "Spring Framework"
