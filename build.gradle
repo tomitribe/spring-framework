@@ -1,6 +1,6 @@
 plugins {
+	id 'maven-publish'
 	id 'io.spring.dependency-management' version '1.0.11.RELEASE' apply false
-	id 'io.spring.nohttp' version '0.0.10'
 	id 'io.freefair.aspectj' version '6.2.0' apply false
 	id 'org.jetbrains.dokka' version '1.6.10' apply false
 	id 'org.jetbrains.kotlin.jvm' version '1.5.32' apply false
@@ -404,33 +404,33 @@ configure(moduleProjects) { project ->
 	apply from: "${rootDir}/gradle/spring-module.gradle"
 }
 
+
+// Changes for publishing to Maven repository
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java // Adjust if necessary for your project
+		}
+	}
+
+	repositories {
+		maven {
+			url = uri("https://repository.tomitribe.com/service/local/staging/deploy/maven2")
+			credentials {
+				username = project.repoUser
+				password = project.repoPassword
+			}
+		}
+	}
+}
+
 configure(rootProject) {
 	description = "Spring Framework"
 
 	apply plugin: "kotlin"
-	apply plugin: "io.spring.nohttp"
 	apply plugin: 'org.springframework.build.api-diff'
 	apply from: "${rootDir}/gradle/publications.gradle"
 	apply from: "${rootDir}/gradle/docs.gradle"
-
-	nohttp {
-		source.exclude "**/test-output/**"
-		allowlistFile = project.file("src/nohttp/allowlist.lines")
-		def rootPath = file(rootDir).toPath()
-		def projectDirs = allprojects.collect { it.projectDir } + "${rootDir}/spring-core-test" + "${rootDir}/buildSrc" + "${rootDir}/framework-docs"
-		projectDirs.forEach { dir ->
-			[ 'bin', 'build', 'out', '.settings' ]
-				.collect { rootPath.relativize(new File(dir, it).toPath()) }
-				.forEach { source.exclude "$it/**" }
-			[ '.classpath', '.project' ]
-				.collect { rootPath.relativize(new File(dir, it).toPath()) }
-				.forEach { source.exclude "$it" }
-		}
-	}
-
-	tasks.named("checkstyleNohttp").configure {
-		maxHeapSize = "1g"
-	}
 
 	publishing {
 		publications {
