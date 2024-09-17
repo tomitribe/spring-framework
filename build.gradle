@@ -303,20 +303,29 @@ configure(allprojects) { project ->
 }
 
 
-// Configuration for the subprojects to ensure all are published
-configure(subprojects) { subproject ->
-	apply plugin: 'maven-publish'
+def excludedModules = ['spring-context-indexer', 'spring-instrument', 'spring-framework-bom']
 
-	publishing {
-		repositories {
-			maven {
-				url = uri("https://repository.tomitribe.com/service/local/staging/deploy/maven2")
-				credentials {
-					username = project.repoUser
-					password = project.repoPassword
+// Configuration for the subprojects to ensure all are published except excluded ones
+configure(subprojects) { subproject ->
+	// Check if the subproject is not in the excluded list
+	if (!excludedModules.contains(subproject.name)) {
+		// Apply the 'maven-publish' plugin only to the included modules
+		apply plugin: 'maven-publish'
+
+		publishing {
+			repositories {
+				maven {
+					url = uri("https://repository.tomitribe.com/service/local/staging/deploy/maven2")
+					credentials {
+						username = project.repoUser
+						password = project.repoPassword
+					}
 				}
 			}
 		}
+	} else {
+		// Print or log information about excluded projects
+		logger.lifecycle("Skipping publishing for project: ${subproject.name}")
 	}
 }
 
