@@ -3,7 +3,7 @@ description = "Spring Framework (Bill of Materials)"
 apply plugin: 'java-platform'
 apply from: "$rootDir/gradle/publications.gradle"
 
-group = "org.springframework"
+group = "org.tomitribe.springframework"
 
 dependencies {
 	constraints {
